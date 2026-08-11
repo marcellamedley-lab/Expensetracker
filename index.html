@@ -218,7 +218,7 @@
   <!-- PAYCHECKS -->
   <div class="panel" id="panel-paychecks">
     <div class="card">
-      <h3>Add a paycheck</h3>
+      <h3 id="paycheckFormTitle">Add a paycheck</h3>
       <div class="row">
         <div class="field" style="max-width:160px;">
           <label>Whose paycheck</label>
@@ -228,7 +228,10 @@
         <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="payAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
         <div class="field"><label>Label (optional)</label><input id="payLabel" placeholder="e.g. biweekly, 1st &amp; 15th"></div>
       </div>
-      <div style="margin-top:14px;"><button class="primary" id="addPaycheckBtn">Add paycheck</button></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button class="primary" id="addPaycheckBtn">Add paycheck</button>
+        <button class="ghost" id="cancelPaycheckEditBtn" style="display:none;">Cancel</button>
+      </div>
     </div>
     <div class="card">
       <h3>Paycheck schedule</h3>
@@ -551,6 +554,19 @@ function renderExpenses(){
 }
 
 /* ---------- PAYCHECKS ---------- */
+let editingPaycheckId = null;
+
+function resetPaycheckForm(){
+  editingPaycheckId = null;
+  document.getElementById('payDay').value='';
+  document.getElementById('payAmount').value='';
+  document.getElementById('payLabel').value='';
+  document.getElementById('payPerson').value='A';
+  document.getElementById('paycheckFormTitle').textContent = 'Add a paycheck';
+  document.getElementById('addPaycheckBtn').textContent = 'Add paycheck';
+  document.getElementById('cancelPaycheckEditBtn').style.display = 'none';
+}
+
 document.getElementById('addPaycheckBtn').addEventListener('click', async ()=>{
   const person = document.getElementById('payPerson').value;
   const day = parseInt(document.getElementById('payDay').value,10);
@@ -559,12 +575,24 @@ document.getElementById('addPaycheckBtn').addEventListener('click', async ()=>{
   if(isNaN(day) || day<1 || day>31 || isNaN(amount) || amount<0){
     showToast('Add a valid pay day (1–31) and amount'); return;
   }
-  state.paychecks.push({id: Date.now().toString(36), person, day, amount, label});
-  document.getElementById('payDay').value='';
-  document.getElementById('payAmount').value='';
-  document.getElementById('payLabel').value='';
-  await saveState(); renderAll();
-  showToast('Paycheck added');
+  if(editingPaycheckId){
+    const idx = state.paychecks.findIndex(p=>p.id===editingPaycheckId);
+    if(idx !== -1){
+      state.paychecks[idx] = {...state.paychecks[idx], person, day, amount, label};
+    }
+    resetPaycheckForm();
+    await saveState(); renderAll();
+    showToast('Paycheck updated');
+  } else {
+    state.paychecks.push({id: Date.now().toString(36), person, day, amount, label});
+    resetPaycheckForm();
+    await saveState(); renderAll();
+    showToast('Paycheck added');
+  }
+});
+
+document.getElementById('cancelPaycheckEditBtn').addEventListener('click', ()=>{
+  resetPaycheckForm();
 });
 
 function renderPaychecks(){
@@ -578,11 +606,30 @@ function renderPaychecks(){
       <td class="mono">${ordinal(p.day)}</td>
       <td class="amt">${fmt(p.amount)}</td>
       <td class="muted">${p.label||'—'}</td>
-      <td><button class="icon-btn" data-del-pay="${p.id}" title="Remove">✕</button></td>
+      <td>
+        <button class="icon-btn" data-edit-pay="${p.id}" title="Edit">✎</button>
+        <button class="icon-btn" data-del-pay="${p.id}" title="Remove">✕</button>
+      </td>
     </tr>
   `).join('');
+  body.querySelectorAll('[data-edit-pay]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const p = state.paychecks.find(x=>x.id===b.dataset.editPay);
+      if(!p) return;
+      editingPaycheckId = p.id;
+      document.getElementById('payPerson').value = p.person;
+      document.getElementById('payDay').value = p.day;
+      document.getElementById('payAmount').value = p.amount;
+      document.getElementById('payLabel').value = p.label||'';
+      document.getElementById('paycheckFormTitle').textContent = 'Edit paycheck';
+      document.getElementById('addPaycheckBtn').textContent = 'Update paycheck';
+      document.getElementById('cancelPaycheckEditBtn').style.display = 'inline-block';
+      document.getElementById('payDay').scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
   body.querySelectorAll('[data-del-pay]').forEach(b=>{
     b.addEventListener('click', async ()=>{
+      if(editingPaycheckId === b.dataset.delPay) resetPaycheckForm();
       state.paychecks = state.paychecks.filter(p=>p.id!==b.dataset.delPay);
       await saveState(); renderAll();
     });
