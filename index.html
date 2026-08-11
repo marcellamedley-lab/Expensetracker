@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Household Split</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F4EF;
+    --paper-raised:#FFFFFF;
+    --ink:#26241F;
+    --ink-soft:#6B675E;
+    --line:#DEDAD0;
+    --a:#2F6F62;      /* partner A accent — deep teal */
+    --a-soft:#DCEAE6;
+    --b:#8B5E83;      /* partner B accent — muted plum */
+    --b-soft:#EFE1EC;
+    --amber:#B9812F;
+    --amber-soft:#F3E6CE;
+    --red:#AF4B3D;
+    --red-soft:#F5E0DB;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px;}
+  h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* header */
+  header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;}
+  header h1{font-size:28px;letter-spacing:-0.01em;}
+  header .tag{color:var(--ink-soft);font-size:13px;}
+  .names-row{display:flex;gap:18px;margin:14px 0 22px;flex-wrap:wrap;}
+  .name-chip{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-soft);}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  /* nav */
+  nav{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:24px;overflow-x:auto;}
+  nav button{
+    background:none;border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;
+    color:var(--ink-soft);padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;
+    white-space:nowrap;
+  }
+  nav button.active{color:var(--ink);border-bottom-color:var(--ink);}
+  nav button:hover{color:var(--ink);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .card h3{font-size:16px;margin-bottom:14px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
+  .field label{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;}
+  input,select{
+    font-family:'Inter',sans-serif;font-size:14px;padding:9px 10px;border:1px solid var(--line);
+    border-radius:7px;background:var(--paper);color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px;}
+  input[type=number]{font-family:'IBM Plex Mono',monospace;}
+
+  button.primary{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;background:var(--ink);color:var(--paper);
+    border:none;padding:10px 16px;border-radius:7px;cursor:pointer;
+  }
+  button.primary:hover{opacity:0.88;}
+  button.ghost{
+    font-family:'Inter',sans-serif;font-weight:500;font-size:13px;background:none;color:var(--ink-soft);
+    border:1px solid var(--line);padding:8px 12px;border-radius:7px;cursor:pointer;
+  }
+  button.ghost:hover{color:var(--red);border-color:var(--red);}
+  button.link{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:12px;text-decoration:underline;padding:0;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);
+     padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;}
+  td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .amt{font-family:'IBM Plex Mono',monospace;}
+  .muted{color:var(--ink-soft);}
+
+  /* split bar - signature element */
+  .splitbar{height:8px;border-radius:5px;overflow:hidden;display:flex;width:120px;background:var(--line);}
+  .splitbar .segA{background:var(--a);height:100%;}
+  .splitbar .segB{background:var(--b);height:100%;}
+
+  .badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;}
+  .badge.prop{background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);}
+  .badge.manual{background:var(--amber-soft);color:var(--amber);}
+  .badge.even{background:var(--a-soft);color:var(--a);}
+
+  /* summary cards */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+  @media(max-width:560px){.summary-grid{grid-template-columns:1fr;}}
+  .sumcard{border-radius:var(--radius);padding:18px 20px;color:#fff;}
+  .sumcard.pa{background:var(--a);}
+  .sumcard.pb{background:var(--b);}
+  .sumcard .label{font-size:12px;opacity:0.85;text-transform:uppercase;letter-spacing:0.05em;}
+  .sumcard .value{font-family:'IBM Plex Mono',monospace;font-size:28px;margin-top:6px;}
+  .sumcard .sub{font-size:12px;opacity:0.85;margin-top:4px;}
+
+  /* timeline */
+  .timeline{position:relative;padding:8px 0 4px;}
+  .tl-track{position:relative;height:2px;background:var(--line);margin:34px 0;}
+  .tl-item{position:absolute;top:-30px;transform:translateX(-50%);text-align:center;font-size:11px;width:74px;}
+  .tl-item .pin{width:10px;height:10px;border-radius:50%;margin:0 auto 4px;border:2px solid var(--paper-raised);}
+  .tl-item.bill .pin{background:var(--ink);}
+  .tl-item.payA .pin{background:var(--a);}
+  .tl-item.payB .pin{background:var(--b);}
+  .tl-item .day{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;}
+  .tl-item .lbl{color:var(--ink-soft);font-size:10px;line-height:1.2;margin-top:2px;}
+
+  /* budget bars */
+  .budget-block{margin-bottom:18px;}
+  .budget-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .budget-track{height:14px;border-radius:8px;background:var(--paper);border:1px solid var(--line);overflow:hidden;}
+  .budget-fill{height:100%;transition:width 0.3s;}
+  .budget-fill.ok{background:var(--a);}
+  .budget-fill.warn{background:var(--amber);}
+  .budget-fill.over{background:var(--red);}
+
+  .empty{color:var(--ink-soft);font-size:13px;padding:18px 0;text-align:center;}
+  .footer-note{color:var(--ink-soft);font-size:12px;margin-top:30px;line-height:1.6;}
+  .icon-btn{background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:16px;padding:2px 6px;}
+  .icon-btn:hover{color:var(--red);}
+  select.month-select{width:auto;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+    padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ledger</h1>
+    <span class="tag">household expenses, split fairly</span>
+  </header>
+  <div class="names-row" id="namesRow"></div>
+
+  <nav>
+    <button data-tab="overview" class="active">This Month</button>
+    <button data-tab="expenses">Bills &amp; Splits</button>
+    <button data-tab="paychecks">Paychecks</button>
+    <button data-tab="groceries">Grocery Budget</button>
+    <button data-tab="setup">Setup</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <div class="panel active" id="panel-overview">
+    <div class="row" style="align-items:center;margin-bottom:16px;">
+      <div class="field" style="max-width:220px;">
+        <label>Month</label>
+        <select id="overviewMonth" class="month-select"></select>
+      </div>
+    </div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="card">
+      <h3>Cash flow this month</h3>
+      <div class="timeline" id="timelineWrap"></div>
+    </div>
+    <div class="card">
+      <h3>What's due</h3>
+      <table>
+        <thead><tr><th>Day</th><th>Bill</th><th>Amount</th><th>Split</th><th style="text-align:right">Each partner owes</th></tr></thead>
+        <tbody id="overviewBillsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div class="panel" id="panel-expenses">
+    <div class="card">
+      <h3>Add a bill</h3>
+      <div class="row">
+        <div class="field"><label>Name</label><input id="expName" placeholder="Rent, internet, car insurance…"></div>
+        <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="expAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="field" style="max-width:110px;"><label>Due day</label><input id="expDay" type="number" min="1" max="31" placeholder="1–31"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field" style="max-width:200px;">
+          <label>Split method</label>
+          <select id="expSplitType">
+            <option value="proportional">Proportional to income</option>
+            <option value="even">Even 50/50</option>
+            <option value="manual">Manual %</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:140px;" id="manualPctWrap" style="display:none;">
+          <label id="manualPctLabel">Partner A share %</label>
+          <input id="expManualPct" type="number" min="0" max="100" placeholder="e.g. 60">
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label>Category (optional)</label>
+          <input id="expCategory" placeholder="housing, utilities…">
+        </div>
+      </div>
+      <div style="margin-top:14px;"><button class="primary" id="addExpenseBtn">Add bill</button></div>
+    </div>
+    <div class="card">
+      <h3>Recurring monthly bills</h3>
+      <table>
+        <thead><tr><th>Bill</th><th>Due</th><th>Amount</th><th>Split</th><th>Breakdown</th><th></th></tr></thead>
+        <tbody id="expensesBody"></tbody>
+      </table>
+      <div class="empty" id="expensesEmpty" style="display:none;">No bills yet — add your first one above.</div>
+    </div>
+  </div>
+
+  <!-- PAYCHECKS -->
+  <div class="panel" id="panel-paychecks">
+    <div class="card">
+      <h3>Add a paycheck</h3>
+      <div class="row">
+        <div class="field" style="max-width:160px;">
+          <label>Whose paycheck</label>
+          <select id="payPerson"></select>
+        </div>
+        <div class="field" style="max-width:110px;"><label>Pay day</label><input id="payDay" type="number" min="1" max="31" placeholder="1–31"></div>
+        <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="payAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="field"><label>Label (optional)</label><input id="payLabel" placeholder="e.g. biweekly, 1st &amp; 15th"></div>
+      </div>
+      <div style="margin-top:14px;"><button class="primary" id="addPaycheckBtn">Add paycheck</button></div>
+    </div>
+    <div class="card">
+      <h3>Paycheck schedule</h3>
+      <table>
+        <thead><tr><th>Person</th><th>Day</th><th>Amount</th><th>Label</th><th></th></tr></thead>
+        <tbody id="paychecksBody"></tbody>
+      </table>
+      <div class="empty" id="paychecksEmpty" style="display:none;">No paychecks added yet.</div>
+    </div>
+  </div>
+
+  <!-- GROCERIES -->
+  <div class="panel" id="panel-groceries">
+    <div class="card">
+      <h3>Monthly budgets</h3>
+      <div class="row">
+        <div class="field"><label>Bulk grocery trip ($)</label><input id="budgetBulk" type="number" min="0" step="0.01"></div>
+        <div class="field"><label>Household items order ($)</label><input id="budgetHousehold" type="number" min="0" step="0.01"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="primary" id="saveBudgetsBtn">Save budgets</button></div>
+    </div>
+    <div class="card">
+      <h3>Spending this month</h3>
+      <div class="row" style="align-items:center;margin-bottom:14px;">
+        <div class="field" style="max-width:200px;"><label>Month</label><select id="groceryMonth" class="month-select"></select></div>
+      </div>
+      <div class="budget-block">
+        <div class="budget-head"><span>Bulk grocery trip</span><span class="mono" id="bulkNumbers"></span></div>
+        <div class="budget-track"><div class="budget-fill" id="bulkFill"></div></div>
+      </div>
+      <div class="budget-block">
+        <div class="budget-head"><span>Household items</span><span class="mono" id="houseNumbers"></span></div>
+        <div class="budget-track"><div class="budget-fill" id="houseFill"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log a purchase</h3>
+      <div class="row">
+        <div class="field" style="max-width:180px;">
+          <label>Category</label>
+          <select id="spendCategory"><option value="bulk">Bulk grocery trip</option><option value="household">Household items</option></select>
+        </div>
+        <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="spendAmount" type="number" min="0" step="0.01"></div>
+        <div class="field"><label>Note (optional)</label><input id="spendNote" placeholder="Costco run, Target order…"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="primary" id="addSpendBtn">Log purchase</button></div>
+    </div>
+    <div class="card">
+      <h3>Purchase log</h3>
+      <table>
+        <thead><tr><th>Category</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+        <tbody id="spendBody"></tbody>
+      </table>
+      <div class="empty" id="spendEmpty" style="display:none;">No purchases logged for this month yet.</div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="panel" id="panel-setup">
+    <div class="card">
+      <h3>Partners &amp; income</h3>
+      <p class="muted" style="font-size:13px;margin-top:-6px;margin-bottom:14px;">Monthly take-home income is used to calculate proportional splits — the partner who earns more covers a proportionally larger share.</p>
+      <div class="row">
+        <div class="field"><label>Partner A name</label><input id="setupNameA" placeholder="e.g. Sam"></div>
+        <div class="field"><label>Partner A monthly income ($)</label><input id="setupIncomeA" type="number" min="0" step="0.01"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label>Partner B name</label><input id="setupNameB" placeholder="e.g. Jordan"></div>
+        <div class="field"><label>Partner B monthly income ($)</label><input id="setupIncomeB" type="number" min="0" step="0.01"></div>
+      </div>
+      <div style="margin-top:14px;"><button class="primary" id="saveSetupBtn">Save</button></div>
+      <div class="row" id="proportionPreview" style="margin-top:14px;"></div>
+    </div>
+    <div class="card">
+      <h3>Data</h3>
+      <p class="muted" style="font-size:13px;margin-bottom:12px;">Data is saved locally in this browser only. It won't sync to other devices or browsers, and clearing your browser data will erase it.</p>
+      <button class="ghost" id="resetBtn">Reset all data</button>
+    </div>
+  </div>
+
+  <p class="footer-note">Amounts shown assume bills and budgets repeat every month. Log actual grocery purchases each month to track against budget — nothing else needs re-entering unless a bill or income changes.</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'household-ledger-data';
+let state = {
+  config: { nameA: 'Partner A', incomeA: 0, nameB: 'Partner B', incomeB: 0 },
+  expenses: [],
+  paychecks: [],
+  budgets: { bulk: 0, household: 0 },
+  spending: []
+};
+let loaded = false;
+
+function monthKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function monthLabel(key){
+  const [y,m] = key.split('-').map(Number);
+  return new Date(y, m-1, 1).toLocaleString('en-US',{month:'long', year:'numeric'});
+}
+function currentMonthKey(){ return monthKey(new Date()); }
+function fmt(n){ return '$' + (Math.round((n+Number.EPSILON)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function ordinal(n){
+  n = parseInt(n,10);
+  if(!n) return '';
+  const s=['th','st','nd','rd'], v=n%100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state = Object.assign(state, parsed);
+    }
+  }catch(e){
+    console.log('No existing data yet, starting fresh.', e);
+  }
+  loaded = true;
+}
+async function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('Storage error', e);
+    showToast('Could not save — try again');
+  }
+}
+
+function splitShares(){
+  const a = Number(state.config.incomeA)||0, b = Number(state.config.incomeB)||0;
+  const total = a+b;
+  if(total<=0) return {a:0.5, b:0.5};
+  return {a: a/total, b: b/total};
+}
+function expenseBreakdown(exp){
+  let pctA;
+  if(exp.splitType === 'even') pctA = 0.5;
+  else if(exp.splitType === 'manual') pctA = (Number(exp.manualPct)||0)/100;
+  else pctA = splitShares().a;
+  const amtA = exp.amount * pctA;
+  const amtB = exp.amount - amtA;
+  return {pctA, pctB: 1-pctA, amtA, amtB};
+}
+
+/* ---------- NAV ---------- */
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------- RENDER: names row & selects ---------- */
+function renderNames(){
+  const row = document.getElementById('namesRow');
+  row.innerHTML = `
+    <span class="name-chip"><span class="dot" style="background:var(--a)"></span>${state.config.nameA} — ${fmt(Number(state.config.incomeA)||0)}/mo</span>
+    <span class="name-chip"><span class="dot" style="background:var(--b)"></span>${state.config.nameB} — ${fmt(Number(state.config.incomeB)||0)}/mo</span>
+  `;
+  const payPerson = document.getElementById('payPerson');
+  payPerson.innerHTML = `<option value="A">${state.config.nameA}</option><option value="B">${state.config.nameB}</option>`;
+  document.getElementById('manualPctLabel').textContent = state.config.nameA + ' share %';
+}
+
+function populateMonthSelects(){
+  const keys = new Set([currentMonthKey()]);
+  state.spending.forEach(s=>keys.add(s.month));
+  const now = new Date();
+  for(let i=-2;i<=3;i++){ keys.add(monthKey(new Date(now.getFullYear(), now.getMonth()+i, 1))); }
+  const sorted = Array.from(keys).sort();
+  [['overviewMonth'],['groceryMonth']].forEach(([id])=>{
+    const sel = document.getElementById(id);
+    const prev = sel.value || currentMonthKey();
+    sel.innerHTML = sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('');
+    sel.value = sorted.includes(prev) ? prev : currentMonthKey();
+  });
+}
+
+/* ---------- OVERVIEW ---------- */
+function renderOverview(){
+  const shares = splitShares();
+  let totalA = 0, totalB = 0;
+  const bills = [...state.expenses].sort((a,b)=>a.dueDay-b.dueDay);
+  bills.forEach(exp=>{
+    const bd = expenseBreakdown(exp);
+    totalA += bd.amtA; totalB += bd.amtB;
+  });
+
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = `
+    <div class="sumcard pa">
+      <div class="label">${state.config.nameA} owes</div>
+      <div class="value">${fmt(totalA)}</div>
+      <div class="sub">${(shares.a*100).toFixed(0)}% income share this month</div>
+    </div>
+    <div class="sumcard pb">
+      <div class="label">${state.config.nameB} owes</div>
+      <div class="value">${fmt(totalB)}</div>
+      <div class="sub">${(shares.b*100).toFixed(0)}% income share this month</div>
+    </div>
+  `;
+
+  // timeline: bills + paychecks by day
+  const items = [];
+  bills.forEach(exp=> items.push({day:exp.dayDue===undefined?exp.dueDay:exp.dueDay, type:'bill', label:exp.name}));
+  state.paychecks.forEach(p=> items.push({day:p.day, type: p.person==='A'?'payA':'payB', label:(p.person==='A'?state.config.nameA:state.config.nameB)+(p.label?' · '+p.label:'')}));
+  items.sort((x,y)=>x.day-y.day);
+  const tl = document.getElementById('timelineWrap');
+  if(items.length===0){
+    tl.innerHTML = '<div class="empty">Add bills and paychecks to see your monthly cash flow.</div>';
+  } else {
+    const minDay = 1, maxDay = 31;
+    const track = items.map(it=>{
+      const pct = ((it.day-minDay)/(maxDay-minDay))*100;
+      return `<div class="tl-item ${it.type}" style="left:${pct}%;">
+        <div class="pin"></div>
+        <div class="day">${ordinal(it.day)}</div>
+        <div class="lbl">${it.label}</div>
+      </div>`;
+    }).join('');
+    tl.innerHTML = `<div class="tl-track">${track}</div>`;
+  }
+
+  // bills table
+  const body = document.getElementById('overviewBillsBody');
+  if(bills.length===0){
+    body.innerHTML = '<tr><td colspan="5" class="empty">No bills added yet — head to "Bills & Splits" to add one.</td></tr>';
+  } else {
+    body.innerHTML = bills.map(exp=>{
+      const bd = expenseBreakdown(exp);
+      return `<tr>
+        <td class="mono">${ordinal(exp.dueDay)}</td>
+        <td>${exp.name}${exp.category?`<div class="muted" style="font-size:11px;">${exp.category}</div>`:''}</td>
+        <td class="amt">${fmt(exp.amount)}</td>
+        <td>${splitBadge(exp)}</td>
+        <td style="text-align:right;">
+          <span class="mono" style="color:var(--a)">${fmt(bd.amtA)}</span> / <span class="mono" style="color:var(--b)">${fmt(bd.amtB)}</span>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function splitBadge(exp){
+  const bd = expenseBreakdown(exp);
+  if(exp.splitType==='even') return `<span class="badge even">Even 50/50</span>`;
+  if(exp.splitType==='manual') return `<span class="badge manual">Manual ${(bd.pctA*100).toFixed(0)}/${(bd.pctB*100).toFixed(0)}</span>`;
+  return `<span class="badge prop">Proportional</span>`;
+}
+
+/* ---------- EXPENSES ---------- */
+document.getElementById('expSplitType').addEventListener('change', e=>{
+  document.getElementById('manualPctWrap').style.display = e.target.value==='manual' ? 'flex' : 'none';
+});
+
+document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('expName').value.trim();
+  const amount = parseFloat(document.getElementById('expAmount').value);
+  const dueDay = parseInt(document.getElementById('expDay').value,10);
+  const splitType = document.getElementById('expSplitType').value;
+  const manualPct = document.getElementById('expManualPct').value;
+  const category = document.getElementById('expCategory').value.trim();
+  if(!name || isNaN(amount) || amount<0 || isNaN(dueDay) || dueDay<1 || dueDay>31){
+    showToast('Add a name, amount, and due day (1–31)'); return;
+  }
+  if(splitType==='manual' && (manualPct==='' || isNaN(manualPct))){
+    showToast('Enter a manual split percentage'); return;
+  }
+  state.expenses.push({
+    id: Date.now().toString(36),
+    name, amount, dueDay, splitType,
+    manualPct: splitType==='manual' ? Number(manualPct) : null,
+    category
+  });
+  document.getElementById('expName').value='';
+  document.getElementById('expAmount').value='';
+  document.getElementById('expDay').value='';
+  document.getElementById('expManualPct').value='';
+  document.getElementById('expCategory').value='';
+  await saveState();
+  renderAll();
+  showToast('Bill added');
+});
+
+function renderExpenses(){
+  const body = document.getElementById('expensesBody');
+  const empty = document.getElementById('expensesEmpty');
+  const list = [...state.expenses].sort((a,b)=>a.dueDay-b.dueDay);
+  empty.style.display = list.length ? 'none' : 'block';
+  body.innerHTML = list.map(exp=>{
+    const bd = expenseBreakdown(exp);
+    return `<tr>
+      <td>${exp.name}${exp.category?`<div class="muted" style="font-size:11px;">${exp.category}</div>`:''}</td>
+      <td class="mono">${ordinal(exp.dueDay)}</td>
+      <td class="amt">${fmt(exp.amount)}</td>
+      <td>${splitBadge(exp)}</td>
+      <td>
+        <div class="splitbar"><div class="segA" style="width:${bd.pctA*100}%"></div><div class="segB" style="width:${bd.pctB*100}%"></div></div>
+        <div class="muted" style="font-size:11px;margin-top:3px;">${fmt(bd.amtA)} / ${fmt(bd.amtB)}</div>
+      </td>
+      <td><button class="icon-btn" data-del-exp="${exp.id}" title="Remove">✕</button></td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('[data-del-exp]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.expenses = state.expenses.filter(e=>e.id!==b.dataset.delExp);
+      await saveState(); renderAll();
+    });
+  });
+}
+
+/* ---------- PAYCHECKS ---------- */
+document.getElementById('addPaycheckBtn').addEventListener('click', async ()=>{
+  const person = document.getElementById('payPerson').value;
+  const day = parseInt(document.getElementById('payDay').value,10);
+  const amount = parseFloat(document.getElementById('payAmount').value);
+  const label = document.getElementById('payLabel').value.trim();
+  if(isNaN(day) || day<1 || day>31 || isNaN(amount) || amount<0){
+    showToast('Add a valid pay day (1–31) and amount'); return;
+  }
+  state.paychecks.push({id: Date.now().toString(36), person, day, amount, label});
+  document.getElementById('payDay').value='';
+  document.getElementById('payAmount').value='';
+  document.getElementById('payLabel').value='';
+  await saveState(); renderAll();
+  showToast('Paycheck added');
+});
+
+function renderPaychecks(){
+  const body = document.getElementById('paychecksBody');
+  const empty = document.getElementById('paychecksEmpty');
+  const list = [...state.paychecks].sort((a,b)=>a.day-b.day);
+  empty.style.display = list.length ? 'none' : 'block';
+  body.innerHTML = list.map(p=>`
+    <tr>
+      <td><span class="dot" style="background:${p.person==='A'?'var(--a)':'var(--b)'};display:inline-block;margin-right:6px;"></span>${p.person==='A'?state.config.nameA:state.config.nameB}</td>
+      <td class="mono">${ordinal(p.day)}</td>
+      <td class="amt">${fmt(p.amount)}</td>
+      <td class="muted">${p.label||'—'}</td>
+      <td><button class="icon-btn" data-del-pay="${p.id}" title="Remove">✕</button></td>
+    </tr>
+  `).join('');
+  body.querySelectorAll('[data-del-pay]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.paychecks = state.paychecks.filter(p=>p.id!==b.dataset.delPay);
+      await saveState(); renderAll();
+    });
+  });
+}
+
+/* ---------- GROCERIES ---------- */
+document.getElementById('saveBudgetsBtn').addEventListener('click', async ()=>{
+  state.budgets.bulk = parseFloat(document.getElementById('budgetBulk').value)||0;
+  state.budgets.household = parseFloat(document.getElementById('budgetHousehold').value)||0;
+  await saveState(); renderAll();
+  showToast('Budgets saved');
+});
+
+document.getElementById('addSpendBtn').addEventListener('click', async ()=>{
+  const category = document.getElementById('spendCategory').value;
+  const amount = parseFloat(document.getElementById('spendAmount').value);
+  const note = document.getElementById('spendNote').value.trim();
+  if(isNaN(amount) || amount<0){ showToast('Enter a valid amount'); return; }
+  const month = document.getElementById('groceryMonth').value || currentMonthKey();
+  state.spending.push({id: Date.now().toString(36), category, amount, note, month});
+  document.getElementById('spendAmount').value='';
+  document.getElementById('spendNote').value='';
+  await saveState(); renderAll();
+  showToast('Purchase logged');
+});
+
+function budgetFillClass(spent, budget){
+  if(budget<=0) return 'ok';
+  const pct = spent/budget;
+  if(pct>1) return 'over';
+  if(pct>=0.85) return 'warn';
+  return 'ok';
+}
+
+function renderGroceries(){
+  document.getElementById('budgetBulk').value = state.budgets.bulk || '';
+  document.getElementById('budgetHousehold').value = state.budgets.household || '';
+
+  const month = document.getElementById('groceryMonth').value || currentMonthKey();
+  const monthSpend = state.spending.filter(s=>s.month===month);
+  const bulkSpent = monthSpend.filter(s=>s.category==='bulk').reduce((s,x)=>s+x.amount,0);
+  const houseSpent = monthSpend.filter(s=>s.category==='household').reduce((s,x)=>s+x.amount,0);
+
+  document.getElementById('bulkNumbers').textContent = `${fmt(bulkSpent)} / ${fmt(state.budgets.bulk||0)}`;
+  document.getElementById('houseNumbers').textContent = `${fmt(houseSpent)} / ${fmt(state.budgets.household||0)}`;
+  const bulkFill = document.getElementById('bulkFill');
+  bulkFill.style.width = state.budgets.bulk>0 ? Math.min(100,(bulkSpent/state.budgets.bulk)*100)+'%' : '0%';
+  bulkFill.className = 'budget-fill ' + budgetFillClass(bulkSpent, state.budgets.bulk);
+  const houseFill = document.getElementById('houseFill');
+  houseFill.style.width = state.budgets.household>0 ? Math.min(100,(houseSpent/state.budgets.household)*100)+'%' : '0%';
+  houseFill.className = 'budget-fill ' + budgetFillClass(houseSpent, state.budgets.household);
+
+  const body = document.getElementById('spendBody');
+  const empty = document.getElementById('spendEmpty');
+  empty.style.display = monthSpend.length ? 'none' : 'block';
+  body.innerHTML = monthSpend.map(s=>`
+    <tr>
+      <td>${s.category==='bulk'?'Bulk grocery trip':'Household items'}</td>
+      <td class="amt">${fmt(s.amount)}</td>
+      <td class="muted">${s.note||'—'}</td>
+      <td><button class="icon-btn" data-del-spend="${s.id}" title="Remove">✕</button></td>
+    </tr>
+  `).join('');
+  body.querySelectorAll('[data-del-spend]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.spending = state.spending.filter(s=>s.id!==b.dataset.delSpend);
+      await saveState(); renderAll();
+    });
+  });
+}
+document.getElementById('groceryMonth').addEventListener('change', renderGroceries);
+document.getElementById('overviewMonth').addEventListener('change', renderOverview);
+
+/* ---------- SETUP ---------- */
+document.getElementById('saveSetupBtn').addEventListener('click', async ()=>{
+  state.config.nameA = document.getElementById('setupNameA').value.trim() || 'Partner A';
+  state.config.incomeA = parseFloat(document.getElementById('setupIncomeA').value)||0;
+  state.config.nameB = document.getElementById('setupNameB').value.trim() || 'Partner B';
+  state.config.incomeB = parseFloat(document.getElementById('setupIncomeB').value)||0;
+  await saveState(); renderAll();
+  showToast('Setup saved');
+});
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('This clears all bills, paychecks, budgets, and purchase history for everyone using this tracker. Continue?')) return;
+  state = { config:{nameA:'Partner A',incomeA:0,nameB:'Partner B',incomeB:0}, expenses:[], paychecks:[], budgets:{bulk:0,household:0}, spending:[] };
+  await saveState(); renderAll();
+  showToast('Data reset');
+});
+function renderSetup(){
+  document.getElementById('setupNameA').value = state.config.nameA;
+  document.getElementById('setupIncomeA').value = state.config.incomeA || '';
+  document.getElementById('setupNameB').value = state.config.nameB;
+  document.getElementById('setupIncomeB').value = state.config.incomeB || '';
+  const shares = splitShares();
+  document.getElementById('proportionPreview').innerHTML = `
+    <div class="field"><label>Resulting proportional split</label>
+      <div class="splitbar" style="width:220px;"><div class="segA" style="width:${shares.a*100}%"></div><div class="segB" style="width:${shares.b*100}%"></div></div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">${state.config.nameA} ${(shares.a*100).toFixed(0)}% · ${state.config.nameB} ${(shares.b*100).toFixed(0)}%</div>
+    </div>`;
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(){
+  renderNames();
+  populateMonthSelects();
+  renderOverview();
+  renderExpenses();
+  renderPaychecks();
+  renderGroceries();
+  renderSetup();
+}
+
+(async function init(){
+  await loadState();
+  renderAll();
+})();
+</script>
+</body>
+</html>
