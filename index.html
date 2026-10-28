@@ -114,8 +114,6 @@
   .tl-item{position:absolute;top:-30px;transform:translateX(-50%);text-align:center;font-size:11px;width:74px;}
   .tl-item .pin{width:10px;height:10px;border-radius:50%;margin:0 auto 4px;border:2px solid var(--paper-raised);}
   .tl-item.bill .pin{background:var(--ink);}
-  .tl-item.payA .pin{background:var(--a);}
-  .tl-item.payB .pin{background:var(--b);}
   .tl-item .day{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;}
   .tl-item .lbl{color:var(--ink-soft);font-size:10px;line-height:1.2;margin-top:2px;}
 
@@ -148,9 +146,7 @@
 
   <nav>
     <button data-tab="overview" class="active">This Month</button>
-    <button data-tab="expenses">Bills &amp; Splits</button>
-    <button data-tab="paychecks">Paychecks</button>
-    <button data-tab="groceries">Grocery Budget</button>
+    <button data-tab="expenses">Expenses</button>
     <button data-tab="setup">Setup</button>
   </nav>
 
@@ -164,13 +160,17 @@
     </div>
     <div class="summary-grid" id="summaryGrid"></div>
     <div class="card">
-      <h3>Cash flow this month</h3>
+      <h3>Grocery / food budget</h3>
+      <div id="groceryAlertBody"></div>
+    </div>
+    <div class="card">
+      <h3>Expense timeline</h3>
       <div class="timeline" id="timelineWrap"></div>
     </div>
     <div class="card">
-      <h3>What's due</h3>
+      <h3>This month's expenses</h3>
       <table>
-        <thead><tr><th>Day</th><th>Bill</th><th>Amount</th><th>Split</th><th style="text-align:right">Each partner owes</th></tr></thead>
+        <thead><tr><th>Date</th><th>Expense</th><th>Amount</th><th>Split</th><th style="text-align:right">Each partner owes</th></tr></thead>
         <tbody id="overviewBillsBody"></tbody>
       </table>
     </div>
@@ -179,11 +179,11 @@
   <!-- EXPENSES -->
   <div class="panel" id="panel-expenses">
     <div class="card">
-      <h3>Add a bill</h3>
+      <h3>Add an expense</h3>
       <div class="row">
-        <div class="field"><label>Name</label><input id="expName" placeholder="Rent, internet, car insurance…"></div>
+        <div class="field"><label>Name</label><input id="expName" placeholder="Rent, car repair, dinner out…"></div>
         <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="expAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
-        <div class="field" style="max-width:110px;"><label>Due day</label><input id="expDay" type="number" min="1" max="31" placeholder="1–31"></div>
+        <div class="field" style="max-width:170px;"><label>Charge date</label><input id="expDate" type="date"></div>
       </div>
       <div class="row" style="margin-top:10px;">
         <div class="field" style="max-width:200px;">
@@ -203,89 +203,21 @@
           <input id="expCategory" placeholder="housing, utilities…">
         </div>
       </div>
-      <div style="margin-top:14px;"><button class="primary" id="addExpenseBtn">Add bill</button></div>
+      <div class="row" style="margin-top:10px;align-items:center;">
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-soft);cursor:pointer;">
+          <input id="expIsGrocery" type="checkbox" style="width:auto;padding:0;">
+          Counts toward grocery/food budget
+        </label>
+      </div>
+      <div style="margin-top:14px;"><button class="primary" id="addExpenseBtn">Add expense</button></div>
     </div>
     <div class="card">
-      <h3>Recurring monthly bills</h3>
+      <h3>All expenses</h3>
       <table>
-        <thead><tr><th>Bill</th><th>Due</th><th>Amount</th><th>Split</th><th>Breakdown</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Expense</th><th>Amount</th><th>Split</th><th>Breakdown</th><th></th></tr></thead>
         <tbody id="expensesBody"></tbody>
       </table>
-      <div class="empty" id="expensesEmpty" style="display:none;">No bills yet — add your first one above.</div>
-    </div>
-  </div>
-
-  <!-- PAYCHECKS -->
-  <div class="panel" id="panel-paychecks">
-    <div class="card">
-      <h3 id="paycheckFormTitle">Add a paycheck</h3>
-      <div class="row">
-        <div class="field" style="max-width:160px;">
-          <label>Whose paycheck</label>
-          <select id="payPerson"></select>
-        </div>
-        <div class="field" style="max-width:110px;"><label>Pay day</label><input id="payDay" type="number" min="1" max="31" placeholder="1–31"></div>
-        <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="payAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
-        <div class="field"><label>Label (optional)</label><input id="payLabel" placeholder="e.g. biweekly, 1st &amp; 15th"></div>
-      </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
-        <button class="primary" id="addPaycheckBtn">Add paycheck</button>
-        <button class="ghost" id="cancelPaycheckEditBtn" style="display:none;">Cancel</button>
-      </div>
-    </div>
-    <div class="card">
-      <h3>Paycheck schedule</h3>
-      <table>
-        <thead><tr><th>Person</th><th>Day</th><th>Amount</th><th>Label</th><th></th></tr></thead>
-        <tbody id="paychecksBody"></tbody>
-      </table>
-      <div class="empty" id="paychecksEmpty" style="display:none;">No paychecks added yet.</div>
-    </div>
-  </div>
-
-  <!-- GROCERIES -->
-  <div class="panel" id="panel-groceries">
-    <div class="card">
-      <h3>Monthly budgets</h3>
-      <div class="row">
-        <div class="field"><label>Bulk grocery trip ($)</label><input id="budgetBulk" type="number" min="0" step="0.01"></div>
-        <div class="field"><label>Household items order ($)</label><input id="budgetHousehold" type="number" min="0" step="0.01"></div>
-      </div>
-      <div style="margin-top:12px;"><button class="primary" id="saveBudgetsBtn">Save budgets</button></div>
-    </div>
-    <div class="card">
-      <h3>Spending this month</h3>
-      <div class="row" style="align-items:center;margin-bottom:14px;">
-        <div class="field" style="max-width:200px;"><label>Month</label><select id="groceryMonth" class="month-select"></select></div>
-      </div>
-      <div class="budget-block">
-        <div class="budget-head"><span>Bulk grocery trip</span><span class="mono" id="bulkNumbers"></span></div>
-        <div class="budget-track"><div class="budget-fill" id="bulkFill"></div></div>
-      </div>
-      <div class="budget-block">
-        <div class="budget-head"><span>Household items</span><span class="mono" id="houseNumbers"></span></div>
-        <div class="budget-track"><div class="budget-fill" id="houseFill"></div></div>
-      </div>
-    </div>
-    <div class="card">
-      <h3>Log a purchase</h3>
-      <div class="row">
-        <div class="field" style="max-width:180px;">
-          <label>Category</label>
-          <select id="spendCategory"><option value="bulk">Bulk grocery trip</option><option value="household">Household items</option></select>
-        </div>
-        <div class="field" style="max-width:140px;"><label>Amount ($)</label><input id="spendAmount" type="number" min="0" step="0.01"></div>
-        <div class="field"><label>Note (optional)</label><input id="spendNote" placeholder="Costco run, Target order…"></div>
-      </div>
-      <div style="margin-top:12px;"><button class="primary" id="addSpendBtn">Log purchase</button></div>
-    </div>
-    <div class="card">
-      <h3>Purchase log</h3>
-      <table>
-        <thead><tr><th>Category</th><th>Amount</th><th>Note</th><th></th></tr></thead>
-        <tbody id="spendBody"></tbody>
-      </table>
-      <div class="empty" id="spendEmpty" style="display:none;">No purchases logged for this month yet.</div>
+      <div class="empty" id="expensesEmpty" style="display:none;">No expenses yet — add your first one above.</div>
     </div>
   </div>
 
@@ -302,6 +234,13 @@
         <div class="field"><label>Partner B name</label><input id="setupNameB" placeholder="e.g. Jordan"></div>
         <div class="field"><label>Partner B monthly income ($)</label><input id="setupIncomeB" type="number" min="0" step="0.01"></div>
       </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field" style="max-width:260px;">
+          <label>Grocery / food budget ($/mo)</label>
+          <input id="setupGroceryBudget" type="number" min="0" step="0.01" placeholder="e.g. 600">
+        </div>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:4px;">Tag an expense as "Counts toward grocery/food budget" when adding it, and This Month will flag it as you approach or pass this amount.</p>
       <div style="margin-top:14px;"><button class="primary" id="saveSetupBtn">Save</button></div>
       <div class="row" id="proportionPreview" style="margin-top:14px;"></div>
     </div>
@@ -312,18 +251,15 @@
     </div>
   </div>
 
-  <p class="footer-note">Amounts shown assume bills and budgets repeat every month. Log actual grocery purchases each month to track against budget — nothing else needs re-entering unless a bill or income changes.</p>
+  <p class="footer-note">Expenses are logged individually with their own charge date — nothing repeats automatically, so log each one (past, today, or upcoming) as it comes up. Update income and your grocery/food budget in Setup whenever they change.</p>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 const STORAGE_KEY = 'household-ledger-data';
 let state = {
-  config: { nameA: 'Partner A', incomeA: 0, nameB: 'Partner B', incomeB: 0 },
-  expenses: [],
-  paychecks: [],
-  budgets: { bulk: 0, household: 0 },
-  spending: []
+  config: { nameA: 'Partner A', incomeA: 0, nameB: 'Partner B', incomeB: 0, groceryBudget: 0 },
+  expenses: []
 };
 let loaded = false;
 
@@ -333,6 +269,17 @@ function monthLabel(key){
   return new Date(y, m-1, 1).toLocaleString('en-US',{month:'long', year:'numeric'});
 }
 function currentMonthKey(){ return monthKey(new Date()); }
+function todayISODate(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function parseLocalDate(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function formatDateShort(dateStr){
+  return parseLocalDate(dateStr).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
 function fmt(n){ return '$' + (Math.round((n+Number.EPSILON)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function ordinal(n){
   n = parseInt(n,10);
@@ -383,6 +330,13 @@ function expenseBreakdown(exp){
   const amtB = exp.amount - amtA;
   return {pctA, pctB: 1-pctA, amtA, amtB};
 }
+function budgetFillClass(spent, budget){
+  if(budget<=0) return 'ok';
+  const pct = spent/budget;
+  if(pct>1) return 'over';
+  if(pct>=0.85) return 'warn';
+  return 'ok';
+}
 
 /* ---------- NAV ---------- */
 document.querySelectorAll('nav button').forEach(btn=>{
@@ -401,30 +355,29 @@ function renderNames(){
     <span class="name-chip"><span class="dot" style="background:var(--a)"></span>${state.config.nameA} — ${fmt(Number(state.config.incomeA)||0)}/mo</span>
     <span class="name-chip"><span class="dot" style="background:var(--b)"></span>${state.config.nameB} — ${fmt(Number(state.config.incomeB)||0)}/mo</span>
   `;
-  const payPerson = document.getElementById('payPerson');
-  payPerson.innerHTML = `<option value="A">${state.config.nameA}</option><option value="B">${state.config.nameB}</option>`;
   document.getElementById('manualPctLabel').textContent = state.config.nameA + ' share %';
 }
 
 function populateMonthSelects(){
   const keys = new Set([currentMonthKey()]);
-  state.spending.forEach(s=>keys.add(s.month));
+  state.expenses.forEach(exp=>{ if(exp.date) keys.add(exp.date.slice(0,7)); });
   const now = new Date();
   for(let i=-2;i<=3;i++){ keys.add(monthKey(new Date(now.getFullYear(), now.getMonth()+i, 1))); }
   const sorted = Array.from(keys).sort();
-  [['overviewMonth'],['groceryMonth']].forEach(([id])=>{
-    const sel = document.getElementById(id);
-    const prev = sel.value || currentMonthKey();
-    sel.innerHTML = sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('');
-    sel.value = sorted.includes(prev) ? prev : currentMonthKey();
-  });
+  const sel = document.getElementById('overviewMonth');
+  const prev = sel.value || currentMonthKey();
+  sel.innerHTML = sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('');
+  sel.value = sorted.includes(prev) ? prev : currentMonthKey();
 }
 
 /* ---------- OVERVIEW ---------- */
 function renderOverview(){
+  const month = document.getElementById('overviewMonth').value || currentMonthKey();
   const shares = splitShares();
   let totalA = 0, totalB = 0;
-  const bills = [...state.expenses].sort((a,b)=>a.dueDay-b.dueDay);
+  const bills = state.expenses
+    .filter(exp=>exp.date && exp.date.slice(0,7)===month)
+    .sort((a,b)=>a.date.localeCompare(b.date));
   bills.forEach(exp=>{
     const bd = expenseBreakdown(exp);
     totalA += bd.amtA; totalB += bd.amtB;
@@ -444,19 +397,38 @@ function renderOverview(){
     </div>
   `;
 
-  // timeline: bills + paychecks by day
-  const items = [];
-  bills.forEach(exp=> items.push({day:exp.dayDue===undefined?exp.dueDay:exp.dueDay, type:'bill', label:exp.name}));
-  state.paychecks.forEach(p=> items.push({day:p.day, type: p.person==='A'?'payA':'payB', label:(p.person==='A'?state.config.nameA:state.config.nameB)+(p.label?' · '+p.label:'')}));
-  items.sort((x,y)=>x.day-y.day);
+  // grocery / food budget alert
+  const groceryBudget = Number(state.config.groceryBudget)||0;
+  const grocerySpent = bills.filter(exp=>exp.isGrocery).reduce((s,x)=>s+x.amount,0);
+  const galertBody = document.getElementById('groceryAlertBody');
+  if(groceryBudget<=0){
+    galertBody.innerHTML = `<p class="muted" style="font-size:13px;">Set a monthly grocery/food budget in Setup to see an alert here.</p>`;
+  } else {
+    const pct = grocerySpent/groceryBudget;
+    const fillClass = budgetFillClass(grocerySpent, groceryBudget);
+    let alertLine = '';
+    if(pct>1){
+      alertLine = `<p style="color:var(--red);font-size:13px;font-weight:600;margin-top:8px;">Over budget by ${fmt(grocerySpent-groceryBudget)}</p>`;
+    } else if(pct>=0.85){
+      alertLine = `<p style="color:var(--amber);font-size:13px;font-weight:600;margin-top:8px;">Nearing budget — ${fmt(groceryBudget-grocerySpent)} left</p>`;
+    }
+    galertBody.innerHTML = `
+      <div class="budget-head"><span>Spent this month</span><span class="mono">${fmt(grocerySpent)} / ${fmt(groceryBudget)}</span></div>
+      <div class="budget-track"><div class="budget-fill ${fillClass}" style="width:${Math.min(100,pct*100)}%"></div></div>
+      ${alertLine}
+    `;
+  }
+
+  // timeline: this month's expenses by day
+  const items = bills.map(exp=>({day: parseLocalDate(exp.date).getDate(), label: exp.name}));
   const tl = document.getElementById('timelineWrap');
   if(items.length===0){
-    tl.innerHTML = '<div class="empty">Add bills and paychecks to see your monthly cash flow.</div>';
+    tl.innerHTML = '<div class="empty">Add expenses to see this month\'s cash flow.</div>';
   } else {
     const minDay = 1, maxDay = 31;
     const track = items.map(it=>{
       const pct = ((it.day-minDay)/(maxDay-minDay))*100;
-      return `<div class="tl-item ${it.type}" style="left:${pct}%;">
+      return `<div class="tl-item bill" style="left:${pct}%;">
         <div class="pin"></div>
         <div class="day">${ordinal(it.day)}</div>
         <div class="lbl">${it.label}</div>
@@ -465,15 +437,15 @@ function renderOverview(){
     tl.innerHTML = `<div class="tl-track">${track}</div>`;
   }
 
-  // bills table
+  // expenses table
   const body = document.getElementById('overviewBillsBody');
   if(bills.length===0){
-    body.innerHTML = '<tr><td colspan="5" class="empty">No bills added yet — head to "Bills & Splits" to add one.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" class="empty">No expenses logged for this month yet — head to "Expenses" to add one.</td></tr>';
   } else {
     body.innerHTML = bills.map(exp=>{
       const bd = expenseBreakdown(exp);
       return `<tr>
-        <td class="mono">${ordinal(exp.dueDay)}</td>
+        <td class="mono">${formatDateShort(exp.date)}</td>
         <td>${exp.name}${exp.category?`<div class="muted" style="font-size:11px;">${exp.category}</div>`:''}</td>
         <td class="amt">${fmt(exp.amount)}</td>
         <td>${splitBadge(exp)}</td>
@@ -500,42 +472,44 @@ document.getElementById('expSplitType').addEventListener('change', e=>{
 document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('expName').value.trim();
   const amount = parseFloat(document.getElementById('expAmount').value);
-  const dueDay = parseInt(document.getElementById('expDay').value,10);
+  const date = document.getElementById('expDate').value;
   const splitType = document.getElementById('expSplitType').value;
   const manualPct = document.getElementById('expManualPct').value;
   const category = document.getElementById('expCategory').value.trim();
-  if(!name || isNaN(amount) || amount<0 || isNaN(dueDay) || dueDay<1 || dueDay>31){
-    showToast('Add a name, amount, and due day (1–31)'); return;
+  const isGrocery = document.getElementById('expIsGrocery').checked;
+  if(!name || isNaN(amount) || amount<0 || !date){
+    showToast('Add a name, amount, and charge date'); return;
   }
   if(splitType==='manual' && (manualPct==='' || isNaN(manualPct))){
     showToast('Enter a manual split percentage'); return;
   }
   state.expenses.push({
     id: Date.now().toString(36),
-    name, amount, dueDay, splitType,
+    name, amount, date, splitType,
     manualPct: splitType==='manual' ? Number(manualPct) : null,
-    category
+    category, isGrocery
   });
   document.getElementById('expName').value='';
   document.getElementById('expAmount').value='';
-  document.getElementById('expDay').value='';
+  document.getElementById('expDate').value = todayISODate();
   document.getElementById('expManualPct').value='';
   document.getElementById('expCategory').value='';
+  document.getElementById('expIsGrocery').checked = false;
   await saveState();
   renderAll();
-  showToast('Bill added');
+  showToast('Expense added');
 });
 
 function renderExpenses(){
   const body = document.getElementById('expensesBody');
   const empty = document.getElementById('expensesEmpty');
-  const list = [...state.expenses].sort((a,b)=>a.dueDay-b.dueDay);
+  const list = [...state.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   empty.style.display = list.length ? 'none' : 'block';
   body.innerHTML = list.map(exp=>{
     const bd = expenseBreakdown(exp);
     return `<tr>
-      <td>${exp.name}${exp.category?`<div class="muted" style="font-size:11px;">${exp.category}</div>`:''}</td>
-      <td class="mono">${ordinal(exp.dueDay)}</td>
+      <td class="mono">${formatDateShort(exp.date)}</td>
+      <td>${exp.name}${exp.category?`<div class="muted" style="font-size:11px;">${exp.category}</div>`:''}${exp.isGrocery?`<div class="muted" style="font-size:11px;">🛒 Grocery/food</div>`:''}</td>
       <td class="amt">${fmt(exp.amount)}</td>
       <td>${splitBadge(exp)}</td>
       <td>
@@ -553,155 +527,6 @@ function renderExpenses(){
   });
 }
 
-/* ---------- PAYCHECKS ---------- */
-let editingPaycheckId = null;
-
-function resetPaycheckForm(){
-  editingPaycheckId = null;
-  document.getElementById('payDay').value='';
-  document.getElementById('payAmount').value='';
-  document.getElementById('payLabel').value='';
-  document.getElementById('payPerson').value='A';
-  document.getElementById('paycheckFormTitle').textContent = 'Add a paycheck';
-  document.getElementById('addPaycheckBtn').textContent = 'Add paycheck';
-  document.getElementById('cancelPaycheckEditBtn').style.display = 'none';
-}
-
-document.getElementById('addPaycheckBtn').addEventListener('click', async ()=>{
-  const person = document.getElementById('payPerson').value;
-  const day = parseInt(document.getElementById('payDay').value,10);
-  const amount = parseFloat(document.getElementById('payAmount').value);
-  const label = document.getElementById('payLabel').value.trim();
-  if(isNaN(day) || day<1 || day>31 || isNaN(amount) || amount<0){
-    showToast('Add a valid pay day (1–31) and amount'); return;
-  }
-  if(editingPaycheckId){
-    const idx = state.paychecks.findIndex(p=>p.id===editingPaycheckId);
-    if(idx !== -1){
-      state.paychecks[idx] = {...state.paychecks[idx], person, day, amount, label};
-    }
-    resetPaycheckForm();
-    await saveState(); renderAll();
-    showToast('Paycheck updated');
-  } else {
-    state.paychecks.push({id: Date.now().toString(36), person, day, amount, label});
-    resetPaycheckForm();
-    await saveState(); renderAll();
-    showToast('Paycheck added');
-  }
-});
-
-document.getElementById('cancelPaycheckEditBtn').addEventListener('click', ()=>{
-  resetPaycheckForm();
-});
-
-function renderPaychecks(){
-  const body = document.getElementById('paychecksBody');
-  const empty = document.getElementById('paychecksEmpty');
-  const list = [...state.paychecks].sort((a,b)=>a.day-b.day);
-  empty.style.display = list.length ? 'none' : 'block';
-  body.innerHTML = list.map(p=>`
-    <tr>
-      <td><span class="dot" style="background:${p.person==='A'?'var(--a)':'var(--b)'};display:inline-block;margin-right:6px;"></span>${p.person==='A'?state.config.nameA:state.config.nameB}</td>
-      <td class="mono">${ordinal(p.day)}</td>
-      <td class="amt">${fmt(p.amount)}</td>
-      <td class="muted">${p.label||'—'}</td>
-      <td>
-        <button class="icon-btn" data-edit-pay="${p.id}" title="Edit">✎</button>
-        <button class="icon-btn" data-del-pay="${p.id}" title="Remove">✕</button>
-      </td>
-    </tr>
-  `).join('');
-  body.querySelectorAll('[data-edit-pay]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const p = state.paychecks.find(x=>x.id===b.dataset.editPay);
-      if(!p) return;
-      editingPaycheckId = p.id;
-      document.getElementById('payPerson').value = p.person;
-      document.getElementById('payDay').value = p.day;
-      document.getElementById('payAmount').value = p.amount;
-      document.getElementById('payLabel').value = p.label||'';
-      document.getElementById('paycheckFormTitle').textContent = 'Edit paycheck';
-      document.getElementById('addPaycheckBtn').textContent = 'Update paycheck';
-      document.getElementById('cancelPaycheckEditBtn').style.display = 'inline-block';
-      document.getElementById('payDay').scrollIntoView({behavior:'smooth', block:'center'});
-    });
-  });
-  body.querySelectorAll('[data-del-pay]').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      if(editingPaycheckId === b.dataset.delPay) resetPaycheckForm();
-      state.paychecks = state.paychecks.filter(p=>p.id!==b.dataset.delPay);
-      await saveState(); renderAll();
-    });
-  });
-}
-
-/* ---------- GROCERIES ---------- */
-document.getElementById('saveBudgetsBtn').addEventListener('click', async ()=>{
-  state.budgets.bulk = parseFloat(document.getElementById('budgetBulk').value)||0;
-  state.budgets.household = parseFloat(document.getElementById('budgetHousehold').value)||0;
-  await saveState(); renderAll();
-  showToast('Budgets saved');
-});
-
-document.getElementById('addSpendBtn').addEventListener('click', async ()=>{
-  const category = document.getElementById('spendCategory').value;
-  const amount = parseFloat(document.getElementById('spendAmount').value);
-  const note = document.getElementById('spendNote').value.trim();
-  if(isNaN(amount) || amount<0){ showToast('Enter a valid amount'); return; }
-  const month = document.getElementById('groceryMonth').value || currentMonthKey();
-  state.spending.push({id: Date.now().toString(36), category, amount, note, month});
-  document.getElementById('spendAmount').value='';
-  document.getElementById('spendNote').value='';
-  await saveState(); renderAll();
-  showToast('Purchase logged');
-});
-
-function budgetFillClass(spent, budget){
-  if(budget<=0) return 'ok';
-  const pct = spent/budget;
-  if(pct>1) return 'over';
-  if(pct>=0.85) return 'warn';
-  return 'ok';
-}
-
-function renderGroceries(){
-  document.getElementById('budgetBulk').value = state.budgets.bulk || '';
-  document.getElementById('budgetHousehold').value = state.budgets.household || '';
-
-  const month = document.getElementById('groceryMonth').value || currentMonthKey();
-  const monthSpend = state.spending.filter(s=>s.month===month);
-  const bulkSpent = monthSpend.filter(s=>s.category==='bulk').reduce((s,x)=>s+x.amount,0);
-  const houseSpent = monthSpend.filter(s=>s.category==='household').reduce((s,x)=>s+x.amount,0);
-
-  document.getElementById('bulkNumbers').textContent = `${fmt(bulkSpent)} / ${fmt(state.budgets.bulk||0)}`;
-  document.getElementById('houseNumbers').textContent = `${fmt(houseSpent)} / ${fmt(state.budgets.household||0)}`;
-  const bulkFill = document.getElementById('bulkFill');
-  bulkFill.style.width = state.budgets.bulk>0 ? Math.min(100,(bulkSpent/state.budgets.bulk)*100)+'%' : '0%';
-  bulkFill.className = 'budget-fill ' + budgetFillClass(bulkSpent, state.budgets.bulk);
-  const houseFill = document.getElementById('houseFill');
-  houseFill.style.width = state.budgets.household>0 ? Math.min(100,(houseSpent/state.budgets.household)*100)+'%' : '0%';
-  houseFill.className = 'budget-fill ' + budgetFillClass(houseSpent, state.budgets.household);
-
-  const body = document.getElementById('spendBody');
-  const empty = document.getElementById('spendEmpty');
-  empty.style.display = monthSpend.length ? 'none' : 'block';
-  body.innerHTML = monthSpend.map(s=>`
-    <tr>
-      <td>${s.category==='bulk'?'Bulk grocery trip':'Household items'}</td>
-      <td class="amt">${fmt(s.amount)}</td>
-      <td class="muted">${s.note||'—'}</td>
-      <td><button class="icon-btn" data-del-spend="${s.id}" title="Remove">✕</button></td>
-    </tr>
-  `).join('');
-  body.querySelectorAll('[data-del-spend]').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      state.spending = state.spending.filter(s=>s.id!==b.dataset.delSpend);
-      await saveState(); renderAll();
-    });
-  });
-}
-document.getElementById('groceryMonth').addEventListener('change', renderGroceries);
 document.getElementById('overviewMonth').addEventListener('change', renderOverview);
 
 /* ---------- SETUP ---------- */
@@ -710,12 +535,13 @@ document.getElementById('saveSetupBtn').addEventListener('click', async ()=>{
   state.config.incomeA = parseFloat(document.getElementById('setupIncomeA').value)||0;
   state.config.nameB = document.getElementById('setupNameB').value.trim() || 'Partner B';
   state.config.incomeB = parseFloat(document.getElementById('setupIncomeB').value)||0;
+  state.config.groceryBudget = parseFloat(document.getElementById('setupGroceryBudget').value)||0;
   await saveState(); renderAll();
   showToast('Setup saved');
 });
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
-  if(!confirm('This clears all bills, paychecks, budgets, and purchase history for everyone using this tracker. Continue?')) return;
-  state = { config:{nameA:'Partner A',incomeA:0,nameB:'Partner B',incomeB:0}, expenses:[], paychecks:[], budgets:{bulk:0,household:0}, spending:[] };
+  if(!confirm('This clears all expenses and settings for everyone using this tracker. Continue?')) return;
+  state = { config:{nameA:'Partner A',incomeA:0,nameB:'Partner B',incomeB:0,groceryBudget:0}, expenses:[] };
   await saveState(); renderAll();
   showToast('Data reset');
 });
@@ -724,6 +550,7 @@ function renderSetup(){
   document.getElementById('setupIncomeA').value = state.config.incomeA || '';
   document.getElementById('setupNameB').value = state.config.nameB;
   document.getElementById('setupIncomeB').value = state.config.incomeB || '';
+  document.getElementById('setupGroceryBudget').value = state.config.groceryBudget || '';
   const shares = splitShares();
   document.getElementById('proportionPreview').innerHTML = `
     <div class="field"><label>Resulting proportional split</label>
@@ -738,13 +565,12 @@ function renderAll(){
   populateMonthSelects();
   renderOverview();
   renderExpenses();
-  renderPaychecks();
-  renderGroceries();
   renderSetup();
 }
 
 (async function init(){
   await loadState();
+  document.getElementById('expDate').value = todayISODate();
   renderAll();
 })();
 </script>
