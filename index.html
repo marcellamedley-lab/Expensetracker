@@ -278,6 +278,7 @@ function parseLocalDate(dateStr){
   return new Date(y, m-1, d);
 }
 function formatDateShort(dateStr){
+  if(!dateStr) return '—';
   return parseLocalDate(dateStr).toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 function fmt(n){ return '$' + (Math.round((n+Number.EPSILON)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
